@@ -1,23 +1,55 @@
 import SwiftUI
 
 struct ListingCardView: View {
-    
     let listing: Listing
+    let isFavorite: Bool
+    let onFavoriteToggle: (() -> Void)?
+    
+    init(listing: Listing, isFavorite: Bool = false, onFavoriteToggle: (() -> Void)? = nil) {
+        self.listing = listing
+        self.isFavorite = isFavorite
+        self.onFavoriteToggle = onFavoriteToggle
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             
             // 🖼 КАРТИНКА
             ZStack(alignment: .top) {
-                
-                Image(listing.imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 220)
-                    .clipped()
+                if let imageUrl = listing.imageUrl {
+                    AsyncImage(url: imageUrl) { phase in
+                        switch phase {
+                        case .empty:
+                            Color(.systemGray5)
+                                .frame(height: 220)
+                                .overlay(ProgressView())
+                        case let .success(image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 220)
+                                .clipped()
+                        case .failure:
+                            Image(listing.imageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 220)
+                                .clipped()
+                        @unknown default:
+                            Color(.systemGray5)
+                                .frame(height: 220)
+                        }
+                    }
                     .cornerRadius(16)
-                
-                // 🎯 OVERLAYS НА КАРТИНКЕ
+                } else {
+                    Image(listing.imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 220)
+                        .clipped()
+                        .cornerRadius(16)
+                }
+
                 VStack {
                     
                     HStack(alignment: .top) {
@@ -26,25 +58,31 @@ struct ListingCardView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             
                             if listing.isGift {
-                                statusTag("Дарение", color: .green)
+                                TagView("Дарение", color: .green, size: .small, style: .filled)
                             }
                             
                             if listing.isExchange {
-                                statusTag("Обмен", color: .blue)
+                                TagView("Обмен", color: .blue, size: .small, style: .filled)
                             }
                             
                             if listing.isRequest {
-                                statusTag("Запрос", color: .orange)
+                                TagView("Запрос", color: .orange, size: .small, style: .filled)
                             }
                         }
                         
                         Spacer()
                         
-                        // ❤️ лайк справа сверху
-                        Image(systemName: "heart")
-                            .padding(10)
-                            .background(Color.white)
-                            .clipShape(Circle())
+                        // ❤️ избранное
+                        Button(action: {
+                            onFavoriteToggle?()
+                        }) {
+                            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                                .foregroundColor(isFavorite ? .red : .primary)
+                                .padding(10)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(10)
                     
@@ -88,8 +126,7 @@ struct ListingCardView: View {
             // 👤 АВТОР
             HStack(spacing: 8) {
                 
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 24))
+                AvatarView(imageName: "person.crop.circle.fill", systemImage: true, size: .small, shape: .circle, statusDot: false)
                 
                 Text(listing.userName)
                     .foregroundColor(.gray)
@@ -114,16 +151,5 @@ struct ListingCardView: View {
         .background(Color.white) // 🤍 карточка белая
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
-    }
-    
-    // 🔧 helper для статусов
-    private func statusTag(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.caption2)
-            .foregroundColor(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(color)
-            .cornerRadius(8)
     }
 }
