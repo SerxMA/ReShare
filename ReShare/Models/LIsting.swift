@@ -205,11 +205,24 @@ struct ListingDetail: Identifiable {
     let photos: [ListingPhoto]
     let tags: [String]
     let userName: String
+    let userId: String?
     let userAvatarUrl: URL?
     let viewCount: Int
     let weightGrams: Int
     let ecoKg: Int?
     let createdAt: String
+    let createdAtDate: Date?
+
+    var createdAtDisplay: String {
+        guard let date = createdAtDate else {
+            return createdAt
+        }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+        }
+        return DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none)
+    }
 
     init(apiDetail: ListingDetailAPIModel) {
         self.id = UUID(uuidString: apiDetail.id) ?? UUID()
@@ -231,10 +244,12 @@ struct ListingDetail: Identifiable {
             }
         self.tags = apiDetail.tags
         self.userName = apiDetail.donor?.fullName ?? "Аноним"
+        self.userId = apiDetail.donor?.id
         self.userAvatarUrl = URL(string: apiDetail.donor?.avatarUrl ?? "")
         self.viewCount = apiDetail.viewCount
         self.weightGrams = apiDetail.weightGrams
         self.ecoKg = apiDetail.weightGrams > 0 ? Int(apiDetail.weightGrams / 1000) : nil
         self.createdAt = apiDetail.createdAt
+        self.createdAtDate = ISO8601DateFormatter().date(from: apiDetail.createdAt)
     }
 }

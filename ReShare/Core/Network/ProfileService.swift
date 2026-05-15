@@ -10,4 +10,18 @@ final class ProfileService {
         print("✅ ProfileService: Запрос профиля завершен успешно")
         return profile
     }
+
+    func updateProfile(request: UpdateProfileRequest) async throws {
+        print("🔍 ProfileService: Отправляем обновление профиля /users/me")
+        let body = try JSONEncoder().encode(request)
+        let _: UserProfile = try await NetworkClient.shared.request(path: "/users/me", method: .put, body: body)
+        print("✅ ProfileService: Профиль обновлен успешно")
+    }
+}
+
+struct UpdateProfileRequest: Codable {
+    let firstName: String
+    let lastName: String
+    let phoneNumber: String
+    let bio: String
 }

@@ -116,18 +116,43 @@ final class ListingsService {
         return response.url
     }
 
-    func uploadFileUrl(_ imageData: Data, fileName: String, mimeType: String = "image/jpeg") async throws -> String {
+    func uploadFileUrl(
+        _ imageData: Data,
+        fileName: String,
+        mimeType: String = "image/jpeg"
+    ) async throws -> String {
+
         print("🔍 ListingsService: Загружаем файл /files/upload")
-        let (data, _) = try await NetworkClient.shared.requestWithResponse(path: "/files/upload", method: .post, body: try NetworkClient.shared.makeMultipartFormDataBody(fieldName: "file", fileName: fileName, fileData: imageData, mimeType: mimeType, boundary: "Boundary-\(UUID().uuidString)"), contentType: "multipart/form-data; boundary=Boundary-\(UUID().uuidString)")
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+
+        let body = try NetworkClient.shared.makeMultipartFormDataBody(
+            fieldName: "file",
+            fileName: fileName,
+            fileData: imageData,
+            mimeType: mimeType,
+            boundary: boundary
+        )
+
+        let (data, _) = try await NetworkClient.shared.requestWithResponse(
+            path: "/files/upload",
+            method: .post,
+            body: body,
+            contentType: "multipart/form-data; boundary=\(boundary)"
+        )
+
         if let response = try? JSONDecoder().decode(FileUploadResponse.self, from: data) {
             print("✅ ListingsService: Файл загружен: \(response.url)")
             return response.url
         }
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let url = json["url"] as? String {
-            print("✅ ListingsService: Файл загружен через url: \(url)")
-            return url
-        }
-        throw NetworkError.decodingFailed(NSError(domain: "ListingsService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Не удалось получить URL загруженного файла"]))
+
+        throw NetworkError.decodingFailed(
+            NSError(
+                domain: "ListingsService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Не удалось получить URL файла"]
+            )
+        )
     }
 
     func addListingPhoto(listingId: String, photoUrl: String, displayOrder: Int) async throws {

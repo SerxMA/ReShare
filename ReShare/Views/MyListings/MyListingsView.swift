@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MyListingsView: View {
     @StateObject private var viewModel = MyListingsViewModel()
+    @StateObject private var locationService = LocationService()
     @EnvironmentObject private var favoritesManager: FavoritesManager
     @State private var isShowingCreateSheet = false
     @State private var searchText: String = ""
@@ -14,8 +15,9 @@ struct MyListingsView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
                                 .foregroundColor(.blue)
-                            Text("Amsterdam")
+                            Text(locationService.locationText)
                                 .font(.subheadline)
+                                .foregroundColor(.primary)
                         }
 
                         Spacer()
@@ -54,6 +56,7 @@ struct MyListingsView: View {
             }
             .task {
                 await viewModel.loadMyListings()
+                locationService.requestLocation()
             }
         }
     }

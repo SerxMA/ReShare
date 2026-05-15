@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
+    @StateObject private var locationService = LocationService()
     @EnvironmentObject private var favoritesManager: FavoritesManager
 
     var body: some View {
@@ -12,8 +13,9 @@ struct FeedView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
                                 .foregroundColor(.blue)
-                            Text("Amsterdam")
+                            Text(locationService.locationText)
                                 .font(.subheadline)
+                                .foregroundColor(.primary)
                         }
 
                         Spacer()
@@ -109,6 +111,7 @@ struct FeedView: View {
             .navigationBarHidden(true)
             .task {
                 await viewModel.loadListings()
+                locationService.requestLocation()
             }
         }
     }

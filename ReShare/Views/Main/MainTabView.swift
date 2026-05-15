@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var favoritesManager = FavoritesManager.shared
+    @StateObject private var messagesViewModel = MessagesViewModel()
     
     var body: some View {
         TabView {
@@ -28,11 +29,12 @@ struct MainTabView: View {
                 }
             
             // 💬 СООБЩЕНИЯ
-            MessagesView()
+            MessagesView(viewModel: messagesViewModel)
                 .tabItem {
                     Image(systemName: "message")
                     Text("Сообщения")
                 }
+                .badge(messagesViewModel.unreadCount > 0 ? String(messagesViewModel.unreadCount) : nil)
             
             // 👤 ПРОФИЛЬ
             ProfileView()
@@ -42,5 +44,8 @@ struct MainTabView: View {
                 }
         }
         .environmentObject(favoritesManager)
+        .task {
+            await messagesViewModel.load()
+        }
     }
 }

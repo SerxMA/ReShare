@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FavoritesView: View {
     @EnvironmentObject private var favoritesManager: FavoritesManager
+    @StateObject private var locationService = LocationService()
     @State private var searchText: String = ""
 
     private var listings: [Listing] {
@@ -24,8 +25,9 @@ struct FavoritesView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
                                 .foregroundColor(.blue)
-                            Text("Amsterdam")
+                            Text(locationService.locationText)
                                 .font(.subheadline)
+                                .foregroundColor(.primary)
                         }
 
                         Spacer()
@@ -96,6 +98,9 @@ struct FavoritesView: View {
                 }
             }
             .navigationBarHidden(true)
+            .onAppear {
+                locationService.requestLocation()
+            }
         }
     }
 }

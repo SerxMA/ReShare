@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @AppStorage("isAuthenticated") private var isAuthenticated = false
+    @State private var isEditingProfile = false
 
     var body: some View {
         NavigationView {
@@ -20,6 +21,14 @@ struct ProfileView: View {
             }
             .navigationTitle("Профиль")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $isEditingProfile) {
+                if let profile = viewModel.profile {
+                    EditProfileView(profile: profile)
+                        .onDisappear {
+                            viewModel.loadProfile()
+                        }
+                }
+            }
             .onAppear {
                 print("🔍 ProfileView: Вход в профиль, начинаем загрузку")
                 viewModel.loadProfile()
@@ -55,7 +64,7 @@ struct ProfileView: View {
             .cornerRadius(20)
 
             HStack(spacing: 12) {
-                Button(action: {}) {
+                Button(action: { isEditingProfile = true }) {
                     Label("Редактировать профиль", systemImage: "pencil")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
@@ -165,42 +174,6 @@ struct ProfileView: View {
 
     private var actionsSection: some View {
         VStack(spacing: 12) {
-            Button(action: {}) {
-                HStack {
-                    Image(systemName: "list.bullet.rectangle")
-                    Text("Мои объявления")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(16)
-            }
-
-            Button(action: {}) {
-                HStack {
-                    Image(systemName: "heart")
-                    Text("Избранное")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(16)
-            }
-
-            Button(action: {}) {
-                HStack {
-                    Image(systemName: "message")
-                    Text("Сообщения")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(16)
-            }
-
             Button(action: logoutTapped) {
                 HStack {
                     Image(systemName: "power")

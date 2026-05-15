@@ -5,6 +5,10 @@ struct ListingDetailView: View {
 
     @StateObject private var viewModel: ListingDetailViewModel
     @EnvironmentObject private var favoritesManager: FavoritesManager
+    @State private var chatId: String?
+    @State private var navigateToChat = false
+    @State private var myUserId: String?
+    @State private var isCreatingConversation = false
 
     init(listingId: String) {
         self.listingId = listingId
@@ -28,65 +32,165 @@ struct ListingDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let detail = viewModel.detail {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(spacing: 20) {
                         photosView(detail)
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(detail.title)
-                                .font(.title2)
-                                .fontWeight(.bold)
+                        VStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(detail.title)
+                                            .font(.title)
+                                            .fontWeight(.semibold)
+                                            .fixedSize(horizontal: false, vertical: true)
 
-                            HStack(spacing: 12) {
-                                TagView(detail.status, color: .gray, size: .small, style: .filled)
-                                TagView(detail.conditionName, color: .orange, size: .small, style: .outline)
-                                TagView(detail.transferTypeName, color: .blue, size: .small, style: .outline)
-                            }
+                                        HStack(spacing: 10) {
+                                            TagView(detail.status, color: .gray, size: .small, style: .filled)
+                                            TagView(detail.conditionName, color: .orange, size: .small, style: .outline)
+                                            TagView(detail.transferTypeName, color: .blue, size: .small, style: .outline)
+                                        }
+                                    }
 
-                            HStack(spacing: 8) {
-                                Image(systemName: "mappin.and.ellipse")
-                                Text((detail.district.map { "\($0), " } ?? "") + detail.city)
-                                    .foregroundColor(.secondary)
-                            }
-                            .font(.subheadline)
-
-                            Text(detail.description)
-                                .foregroundColor(.primary)
-                                .lineLimit(nil)
-
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Label(detail.userName, systemImage: "person.circle")
                                     Spacer()
-                                    Text(detail.createdAt)
+
+                                    Text(detail.createdAtDisplay)
+                                        .font(.subheadline)
                                         .foregroundColor(.secondary)
-                                        .font(.caption)
                                 }
 
-                                HStack {
-                                    Label("Вес: \(detail.weightGrams) г", systemImage: "scalemass")
-                                    Spacer()
-                                    if let eco = detail.ecoKg {
-                                        Label("\(eco) кг CO₂", systemImage: "leaf.fill")
-                                    }
+                                HStack(spacing: 8) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .foregroundColor(.secondary)
+                                    Text((detail.district.map { "\($0), " } ?? "") + detail.city)
+                                        .foregroundColor(.secondary)
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
+
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack(spacing: 14) {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "scalemass")
+                                                .foregroundColor(.blue)
+                                            Text("Вес")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                        }
+                                        Text("\(detail.weightGrams) г")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "leaf.fill")
+                                                .foregroundColor(.green)
+                                            Text("Экология")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                        }
+                                        Text(detail.ecoKg.map { "\($0) кг CO₂" } ?? "—")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+
+                                Divider()
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Описание")
+                                        .font(.headline)
+                                    Text(detail.description)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
+
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(alignment: .top, spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.15))
+                                            .frame(width: 52, height: 52)
+                                        Text(detail.userName.prefix(1))
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                    }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(detail.userName)
+                                            .font(.headline)
+                                        Text("Владелец объявления")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                }
 
                                 if !detail.tags.isEmpty {
-                                    HStack {
-                                        Text("Теги:")
-                                            .fontWeight(.semibold)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Теги")
+                                            .font(.headline)
                                         FlexibleTagList(tags: detail.tags)
                                     }
                                 }
                             }
-                            .padding(.vertical, 8)
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
+
+                            if let ownerId = detail.userId, ownerId != myUserId {
+                                Button(action: {
+                                    guard !isCreatingConversation else { return }
+                                    isCreatingConversation = true
+                                    Task {
+                                        do {
+                                            let conv = try await ChatService.shared.createConversation(recipientId: ownerId, listingId: detail.apiId)
+                                            chatId = conv
+                                            navigateToChat = true
+                                        } catch {
+                                            print("Ошибка создания беседы: \(error)")
+                                        }
+                                        isCreatingConversation = false
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "message.fill")
+                                        Text("Написать владельцу")
+                                            .fontWeight(.semibold)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .foregroundColor(.white)
+                                    .background(Color.blue)
+                                    .cornerRadius(16)
+                                }
+                                .padding(.top, 4)
+                            }
                         }
                         .padding(.horizontal)
                     }
                 }
             } else {
-                EmptyView()
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Загрузка данных объявления...")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .navigationTitle("Объявление")
@@ -105,7 +209,28 @@ struct ListingDetailView: View {
         }
         .task {
             await viewModel.load()
+            Task {
+                do {
+                    let profile = try await ProfileService.shared.fetchMyProfile()
+                    myUserId = profile.id
+                } catch {
+                    print("Не удалось загрузить профиль: \(error)")
+                }
+            }
         }
+        .background(
+            NavigationLink(
+                destination: Group {
+                    if let id = chatId {
+                        ChatView(conversationId: id)
+                    } else {
+                        EmptyView()
+                    }
+                },
+                isActive: $navigateToChat,
+                label: { EmptyView() }
+            )
+        )
     }
 
     @ViewBuilder
@@ -156,7 +281,7 @@ private struct FlexibleTagList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(tags, id: \ .self) { tag in
+            ForEach(tags, id: \.self) { tag in
                 Text(tag)
                     .font(.caption)
                     .padding(.vertical, 6)

@@ -264,7 +264,7 @@ final class NetworkClient {
         return try await request(path: path, method: .post, body: body, contentType: "multipart/form-data; boundary=\(boundary)")
     }
 
-    private func makeMultipartFormDataBody(
+    func makeMultipartFormDataBody(
         fieldName: String,
         fileName: String,
         fileData: Data,
