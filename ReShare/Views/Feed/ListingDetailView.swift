@@ -5,10 +5,13 @@ struct ListingDetailView: View {
 
     @StateObject private var viewModel: ListingDetailViewModel
     @EnvironmentObject private var favoritesManager: FavoritesManager
+    @Environment(\.dismiss) private var dismiss
     @State private var chatId: String?
     @State private var navigateToChat = false
     @State private var myUserId: String?
     @State private var isCreatingConversation = false
+    @State private var isPresentingEdit = false
+    @State private var isShowingDeleteConfirmation = false
 
     init(listingId: String) {
         self.listingId = listingId
@@ -151,7 +154,40 @@ struct ListingDetailView: View {
                             .cornerRadius(20)
                             .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
 
-                            if let ownerId = detail.userId, ownerId != myUserId {
+                            if let ownerId = detail.userId, ownerId == myUserId {
+                                VStack(spacing: 12) {
+                                    Button(action: {
+                                        isPresentingEdit = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "pencil")
+                                            Text("Редактировать")
+                                                .fontWeight(.semibold)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .foregroundColor(.white)
+                                        .background(Color.blue)
+                                        .cornerRadius(16)
+                                    }
+
+                                    Button(action: {
+                                        isShowingDeleteConfirmation = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "trash")
+                                            Text("Удалить")
+                                                .fontWeight(.semibold)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .foregroundColor(.white)
+                                        .background(Color.red)
+                                        .cornerRadius(16)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            } else if let ownerId = detail.userId, ownerId != myUserId {
                                 Button(action: {
                                     guard !isCreatingConversation else { return }
                                     isCreatingConversation = true
@@ -218,6 +254,25 @@ struct ListingDetailView: View {
                 }
             }
         }
+        .alert("Удалить объявление?", isPresented: $isShowingDeleteConfirmation) {
+            Button("Отменить", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                Task {
+                    await deleteListing()
+                }
+            }
+        } message: {
+            Text("Это действие необратимо.")
+        }
+        .sheet(isPresented: $isPresentingEdit) {
+            if let detail = viewModel.detail {
+                CreateListingView(existingDetail: detail) {
+                    Task {
+                        await viewModel.load()
+                    }
+                }
+            }
+        }
         .background(
             NavigationLink(
                 destination: Group {
@@ -231,6 +286,16 @@ struct ListingDetailView: View {
                 label: { EmptyView() }
             )
         )
+    }
+
+    private func deleteListing() async {
+        guard let listingId = viewModel.detail?.apiId else { return }
+        do {
+            try await ListingsService.shared.deleteListing(listingId)
+            dismiss()
+        } catch {
+            print("Ошибка удаления объявления: \(error)")
+        }
     }
 
     @ViewBuilder

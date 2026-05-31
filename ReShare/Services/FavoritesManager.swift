@@ -15,6 +15,10 @@ struct FavoriteListing: Codable, Identifiable, Equatable {
     let isRequest: Bool
     let isPickup: Bool
     let ecoKg: Int?
+    let categoryId: String?
+    let categoryName: String
+    let conditionName: String
+    let condition: ListingCondition?
 
     init(listing: Listing) {
         self.id = listing.apiId ?? UUID().uuidString
@@ -30,6 +34,10 @@ struct FavoriteListing: Codable, Identifiable, Equatable {
         self.isRequest = listing.isRequest
         self.isPickup = listing.isPickup
         self.ecoKg = listing.ecoKg
+        self.categoryId = listing.categoryId
+        self.categoryName = listing.categoryName
+        self.conditionName = listing.conditionName
+        self.condition = listing.condition
     }
 }
 

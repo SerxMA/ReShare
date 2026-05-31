@@ -162,6 +162,19 @@ final class ListingsService {
         print("✅ ListingsService: Фото добавлено")
     }
 
+    func updateListing(_ listingId: String, request: CreateListingRequest) async throws {
+        let body = try JSONEncoder().encode(request)
+        print("🔍 ListingsService: Обновляем объявление /listings/\(listingId)")
+        try await NetworkClient.shared.requestVoid(path: "/listings/\(listingId)", method: .put, body: body)
+        print("✅ ListingsService: Объявление обновлено")
+    }
+
+    func deleteListing(_ listingId: String) async throws {
+        print("🔍 ListingsService: Удаляем объявление /listings/\(listingId)")
+        try await NetworkClient.shared.requestVoid(path: "/listings/\(listingId)", method: .delete)
+        print("✅ ListingsService: Объявление удалено")
+    }
+
     func updateListingStatus(listingId: String, status: String) async throws {
         let body = try JSONEncoder().encode(ChangeStatusRequest(status: status))
         print("🔍 ListingsService: Обновляем статус объявления /listings/\(listingId)/status")

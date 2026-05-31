@@ -108,25 +108,31 @@ struct MyListingsView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(viewModel.listings) { listing in
-                        if let apiId = listing.apiId {
-                            NavigationLink(destination: ListingDetailView(listingId: apiId)) {
+                        HStack {
+                            Spacer(minLength: 0)
+                            if let apiId = listing.apiId {
+                                NavigationLink(destination: ListingDetailView(listingId: apiId)) {
+                                    ListingCardView(
+                                        listing: listing,
+                                        isFavorite: favoritesManager.isFavorite(listingId: apiId),
+                                        onFavoriteToggle: {
+                                            favoritesManager.toggleFavorite(listing: listing)
+                                        }
+                                    )
+                                    .frame(maxWidth: 380)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
                                 ListingCardView(
                                     listing: listing,
-                                    isFavorite: favoritesManager.isFavorite(listingId: apiId),
+                                    isFavorite: favoritesManager.isFavorite(listingId: listing.apiId),
                                     onFavoriteToggle: {
                                         favoritesManager.toggleFavorite(listing: listing)
                                     }
                                 )
+                                .frame(maxWidth: 380)
                             }
-                            .buttonStyle(.plain)
-                        } else {
-                            ListingCardView(
-                                listing: listing,
-                                isFavorite: favoritesManager.isFavorite(listingId: listing.apiId),
-                                onFavoriteToggle: {
-                                    favoritesManager.toggleFavorite(listing: listing)
-                                }
-                            )
+                            Spacer(minLength: 0)
                         }
                     }
                 }

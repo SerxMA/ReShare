@@ -14,6 +14,10 @@ struct Listing: Identifiable {
     let isRequest: Bool
     let isPickup: Bool
     let ecoKg: Int?
+    let categoryId: String?
+    let categoryName: String
+    let conditionName: String
+    let condition: ListingCondition?
 
     init(
         id: UUID = UUID(),
@@ -28,7 +32,11 @@ struct Listing: Identifiable {
         isExchange: Bool,
         isRequest: Bool,
         isPickup: Bool,
-        ecoKg: Int? = nil
+        ecoKg: Int? = nil,
+        categoryId: String? = nil,
+        categoryName: String = "",
+        conditionName: String = "",
+        condition: ListingCondition? = nil
     ) {
         self.id = id
         self.apiId = apiId
@@ -43,6 +51,10 @@ struct Listing: Identifiable {
         self.isRequest = isRequest
         self.isPickup = isPickup
         self.ecoKg = ecoKg
+        self.categoryId = categoryId
+        self.categoryName = categoryName
+        self.conditionName = conditionName
+        self.condition = condition
     }
 
     init(apiItem: ListingPreviewAPIModel) {
@@ -54,6 +66,10 @@ struct Listing: Identifiable {
         self.userName = apiItem.donor?.fullName ?? "Аноним"
         self.distance = apiItem.city
         self.timeAgo = Listing.relativeDateText(from: apiItem.createdAt)
+        self.categoryId = apiItem.category.id
+        self.categoryName = apiItem.category.name
+        self.conditionName = apiItem.condition
+        self.condition = ListingCondition(rawValue: apiItem.condition)
 
         let transferType = apiItem.transferType.lowercased()
         self.isGift = transferType.contains("donation") || transferType.contains("gift")
@@ -72,6 +88,10 @@ struct Listing: Identifiable {
         self.userName = favorite.userName
         self.distance = favorite.distance
         self.timeAgo = favorite.timeAgo
+        self.categoryId = favorite.categoryId
+        self.categoryName = favorite.categoryName
+        self.conditionName = favorite.conditionName
+        self.condition = favorite.condition
         self.isGift = favorite.isGift
         self.isExchange = favorite.isExchange
         self.isRequest = favorite.isRequest
@@ -88,6 +108,10 @@ struct Listing: Identifiable {
         self.userName = detail.userName
         self.distance = detail.city
         self.timeAgo = Listing.relativeDateText(from: detail.createdAt)
+        self.categoryId = detail.categoryId
+        self.categoryName = detail.categoryName
+        self.conditionName = detail.conditionName
+        self.condition = ListingCondition(rawValue: detail.conditionName)
         self.isGift = detail.transferTypeName.lowercased().contains("gift") || detail.transferTypeName.lowercased().contains("donation")
         self.isExchange = detail.transferTypeName.lowercased().contains("exchange")
         self.isRequest = detail.transferTypeName.lowercased().contains("request")
@@ -100,17 +124,36 @@ struct Listing: Identifiable {
         guard let date = formatter.date(from: isoDate) else {
             return ""
         }
-        let interval = Date().timeIntervalSince(date)
-        if interval < 60 {
-            return "Только что"
+        let calendar = Calendar.current
+        let outputFormatter = DateFormatter()
+        outputFormatter.locale = Locale(identifier: "ru_RU")
+
+        if calendar.isDateInToday(date) {
+            outputFormatter.dateFormat = "HH:mm"
+            return outputFormatter.string(from: date)
         }
-        if interval < 3600 {
-            return "\(Int(interval / 60)) мин назад"
+
+        outputFormatter.dateFormat = "d MMMM"
+        return outputFormatter.string(from: date)
+    }
+}
+
+extension CategoryAPIModel {
+    var localizedName: String {
+        switch name.lowercased() {
+        case "electronics": return "Электроника"
+        case "clothing": return "Одежда"
+        case "books": return "Книги"
+        case "furniture": return "Мебель"
+        case "toys": return "Игрушки"
+        case "beauty": return "Красота"
+        case "sports": return "Спорт"
+        case "tools": return "Инструменты"
+        case "garden": return "Сад"
+        case "office": return "Офис"
+        default:
+            return name
         }
-        if interval < 86_400 {
-            return "\(Int(interval / 3600)) ч назад"
-        }
-        return "\(Int(interval / 86_400)) д назад"
     }
 }
 
@@ -195,6 +238,7 @@ struct ListingDetail: Identifiable {
     let apiId: String
     let title: String
     let description: String
+    let categoryId: String?
     let categoryName: String
     let conditionName: String
     let transferTypeName: String
@@ -218,10 +262,16 @@ struct ListingDetail: Identifiable {
             return createdAt
         }
         let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ru_RU")
+
         if calendar.isDateInToday(date) {
-            return DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+            formatter.dateFormat = "HH:mm"
+            return formatter.string(from: date)
         }
-        return DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none)
+
+        formatter.dateFormat = "d MMMM"
+        return formatter.string(from: date)
     }
 
     init(apiDetail: ListingDetailAPIModel) {
@@ -229,6 +279,7 @@ struct ListingDetail: Identifiable {
         self.apiId = apiDetail.id
         self.title = apiDetail.title
         self.description = apiDetail.description
+        self.categoryId = apiDetail.category.id
         self.categoryName = apiDetail.category.name
         self.conditionName = apiDetail.condition
         self.transferTypeName = apiDetail.transferType

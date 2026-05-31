@@ -3,15 +3,20 @@ import PhotosUI
 
 struct CreateListingView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = CreateListingViewModel()
+    @StateObject private var viewModel: CreateListingViewModel
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     let onSuccess: () -> Void
+
+    init(existingDetail: ListingDetail? = nil, onSuccess: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: CreateListingViewModel(existingDetail: existingDetail))
+        self.onSuccess = onSuccess
+    }
 
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
-                    sectionTitle("Новое объявление")
+                    sectionTitle(viewModel.isEditing ? "Редактировать объявление" : "Новое объявление")
 
                     InputBase(
                         text: $viewModel.title,
@@ -90,14 +95,14 @@ struct CreateListingView: View {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
-                            Text("Опубликовать")
+                            Text(viewModel.isEditing ? "Обновить" : "Опубликовать")
                                 .foregroundColor(.white)
                         }
                     }
                 }
                 .padding()
             }
-            .navigationTitle("Создать объявление")
+            .navigationTitle(viewModel.isEditing ? "Редактировать объявление" : "Создать объявление")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -128,7 +133,7 @@ struct CreateListingView: View {
                 )) {
                     Text("Выберите категорию").tag("")
                     ForEach(viewModel.categories, id: \.id) { category in
-                        Text(category.name).tag(category.id)
+                        Text(category.localizedName).tag(category.id)
                     }
                 }
                 .pickerStyle(.menu)
@@ -249,7 +254,7 @@ struct CreateListingView: View {
 
     private func submit() async {
         do {
-            try await viewModel.createListing()
+            try await viewModel.saveListing()
             onSuccess()
             dismiss()
         } catch {

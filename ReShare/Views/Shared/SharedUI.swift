@@ -110,6 +110,7 @@ struct InputBase: View {
     let placeholder: String
     let leftIcon: Image?
     let rightIcon: Image?
+    let rightIconAction: (() -> Void)?
     let inputStyle: InputStyle
     let stateStyle: InputStateStyle
     let keyboardType: UIKeyboardType
@@ -122,6 +123,7 @@ struct InputBase: View {
         helper: String? = nil,
         leftIcon: Image? = nil,
         rightIcon: Image? = nil,
+        rightIconAction: (() -> Void)? = nil,
         inputStyle: InputStyle = .outline,
         stateStyle: InputStateStyle = .normal,
         keyboardType: UIKeyboardType = .default,
@@ -133,6 +135,7 @@ struct InputBase: View {
         self.helper = helper
         self.leftIcon = leftIcon
         self.rightIcon = rightIcon
+        self.rightIconAction = rightIconAction
         self.inputStyle = inputStyle
         self.stateStyle = stateStyle
         self.keyboardType = keyboardType
@@ -159,8 +162,16 @@ struct InputBase: View {
                     .foregroundColor(disabled ? .gray : .primary)
 
                 if let rightIcon {
-                    rightIcon
-                        .foregroundColor(.gray)
+                    if let rightIconAction {
+                        Button(action: rightIconAction) {
+                            rightIcon
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        rightIcon
+                            .foregroundColor(.gray)
+                    }
                 }
             }
             .padding(14)

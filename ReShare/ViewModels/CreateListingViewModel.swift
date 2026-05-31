@@ -4,7 +4,7 @@ import Combine
 import UIKit
 import PhotosUI
 
-enum ListingCondition: String, CaseIterable, Identifiable {
+enum ListingCondition: String, CaseIterable, Identifiable, Codable {
     case New = "New"
     case LikeNew = "LikeNew"
     case Good = "Good"
@@ -55,6 +55,9 @@ enum ListingTransferMethod: String, CaseIterable, Identifiable {
 
 @MainActor
 final class CreateListingViewModel: ObservableObject {
+    let editingListingId: String?
+    let existingCategoryName: String?
+
     @Published var title: String = ""
     @Published var description: String = ""
     @Published var city: String = ""
@@ -70,13 +73,37 @@ final class CreateListingViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var successMessage: String?
 
+    var isEditing: Bool {
+        editingListingId != nil
+    }
+
+    var hasPhotos: Bool {
+        isEditing || !selectedImages.isEmpty
+    }
+
     var canSubmit: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && Int(weight) != nil
             && selectedCategoryId != nil
-            && !selectedImages.isEmpty
+            && hasPhotos
+    }
+
+    init(existingDetail: ListingDetail? = nil) {
+        self.editingListingId = existingDetail?.apiId
+        self.existingCategoryName = existingDetail?.categoryName
+
+        if let detail = existingDetail {
+            title = detail.title
+            description = detail.description
+            city = detail.city
+            weight = String(detail.weightGrams)
+            tagsText = detail.tags.joined(separator: ", ")
+            condition = ListingCondition(rawValue: detail.conditionName) ?? .Good
+            transferType = ListingTransferType(rawValue: detail.transferTypeName) ?? .Gift
+            transferMethod = ListingTransferMethod(rawValue: detail.transferMethodName) ?? .InPerson
+        }
     }
 
     func loadCategories() async {
@@ -84,7 +111,12 @@ final class CreateListingViewModel: ObservableObject {
         errorMessage = nil
         do {
             categories = try await ListingsService.shared.fetchCategories()
-            selectedCategoryId = categories.first?.id
+            if let existingCategoryName = existingCategoryName,
+               let matchedCategory = categories.first(where: { $0.name == existingCategoryName }) {
+                selectedCategoryId = matchedCategory.id
+            } else {
+                selectedCategoryId = categories.first?.id
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -105,14 +137,14 @@ final class CreateListingViewModel: ObservableObject {
         }
     }
 
-    func createListing() async throws {
+    func saveListing() async throws {
         guard let categoryId = selectedCategoryId else {
             throw NSError(domain: "CreateListingViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: "Выберите категорию"]) 
         }
         guard let weightGrams = Int(weight) else {
             throw NSError(domain: "CreateListingViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: "Введите корректный вес"])
         }
-        guard !selectedImages.isEmpty else {
+        guard hasPhotos else {
             throw NSError(domain: "CreateListingViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: "Добавьте хотя бы одну фотографию"])
         }
 
@@ -139,23 +171,39 @@ final class CreateListingViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let listingId = try await ListingsService.shared.createListing(request)
+            if let listingId = editingListingId {
+                try await ListingsService.shared.updateListing(listingId, request: request)
 
-            var uploadedPhotoUrls: [String] = []
-            for (index, image) in selectedImages.enumerated() {
-                guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                    continue
+                if !selectedImages.isEmpty {
+                    for (index, image) in selectedImages.enumerated() {
+                        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                            continue
+                        }
+                        let uploadedUrl = try await ListingsService.shared.uploadFile(imageData, fileName: "listing-photo-\(index + 1).jpg")
+                        try await ListingsService.shared.addListingPhoto(listingId: listingId, photoUrl: uploadedUrl, displayOrder: index)
+                    }
                 }
-                let uploadedUrl = try await ListingsService.shared.uploadFile(imageData, fileName: "listing-photo-\(index + 1).jpg")
-                try await ListingsService.shared.addListingPhoto(listingId: listingId, photoUrl: uploadedUrl, displayOrder: index)
-                uploadedPhotoUrls.append(uploadedUrl)
-            }
 
-            if !uploadedPhotoUrls.isEmpty {
-                try await ListingsService.shared.updateListingStatus(listingId: listingId, status: "Active")
-            }
+                successMessage = "Объявление успешно обновлено"
+            } else {
+                let listingId = try await ListingsService.shared.createListing(request)
 
-            successMessage = "Объявление успешно создано"
+                var uploadedPhotoUrls: [String] = []
+                for (index, image) in selectedImages.enumerated() {
+                    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                        continue
+                    }
+                    let uploadedUrl = try await ListingsService.shared.uploadFile(imageData, fileName: "listing-photo-\(index + 1).jpg")
+                    try await ListingsService.shared.addListingPhoto(listingId: listingId, photoUrl: uploadedUrl, displayOrder: index)
+                    uploadedPhotoUrls.append(uploadedUrl)
+                }
+
+                if !uploadedPhotoUrls.isEmpty {
+                    try await ListingsService.shared.updateListingStatus(listingId: listingId, status: "Active")
+                }
+
+                successMessage = "Объявление успешно создано"
+            }
         } catch {
             errorMessage = error.localizedDescription
             throw error
